@@ -9,12 +9,13 @@ an input. SolidDb soes have direct http access, but does not allow direct querie
 Code uses microhttpd (version 0.9.75 used) and Solid ODBC library.
 
 To access pmons through this exporter add following to the prometheus config file:
-
+```
   - job_name: solid
     # If soliddb-exporter is installed, grab stats about the local
     # machine by default.
     static_configs:
       - targets: ['localhost:9101']
+```
 
 Links:
 - Prometheus: https://prometheus.io/
