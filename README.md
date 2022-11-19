@@ -8,6 +8,15 @@ an input. SolidDb soes have direct http access, but does not allow direct querie
 
 Code uses microhttpd (version 0.9.75 used) and Solid ODBC library.
 
+Command-line options:
+```
+solid-exporter [port] [connect-string] [user] [password]
+```
+- port is the port number where the daeomon in listening (default is 9001)
+- connect-string is ODBC connect string in SoidDb format (default is "tcp 1964")
+- ODBC user name (default is "dba")
+- ODBC password (default is "dba")
+
 To access pmons through this exporter add following to the prometheus config file:
 ```
   - job_name: solid
@@ -16,6 +25,8 @@ To access pmons through this exporter add following to the prometheus config fil
     static_configs:
       - targets: ['localhost:9101']
 ```
+
+Note: when using this deamon as is the user name and password do show in the process list. Process needs to be wrapped to a container, or the code should be changed to read the configuration from a config file.
 
 Links:
 - Prometheus: https://prometheus.io/
