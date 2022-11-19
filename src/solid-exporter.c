@@ -121,7 +121,7 @@ SolidPmon **solid_pmons_init(char *name0, ...)
 void solid_pmons_free(SolidPmon **pmons)
 {
 	int i;
-	for (i=0; pmons[i] !=NULL; i++) {
+	for (i=0; pmons[i] != NULL; i++) {
 		free(pmons[i]->pmon_short);
 		free(pmons[i]->pmon_long);
 		free(pmons[i]);
@@ -130,14 +130,45 @@ void solid_pmons_free(SolidPmon **pmons)
 }
 
 /**
+ * Compare 2 pmons by the their names.
+ *
+ * The predicate to be used with qsort and bsearch.
+ */
+static int cmp_pmon_name(const void *m1, const void *m2)
+{
+	const SolidPmon **mi1 = m1;
+	const SolidPmon **mi2 = m2;
+	return strcmp((*mi1)->pmon_short, (*mi2)->pmon_short);
+}
+
+/**
+ * Compare 2 pmons by the their names.
+ *
+ * The predicate to be used with qsort and bsearch.
+ */
+static int cmp_pmon_no(const void *m1, const void *m2)
+{
+	const SolidPmon **mi1 = m1;
+	const SolidPmon **mi2 = m2;
+	if ((*mi1)->pmon_no < (*mi2)->pmon_no) {
+		return -1;
+	} else if ((*mi1)->pmon_no > (*mi2)->pmon_no) {
+		return 1;
+	} else {
+		return 0;
+	}
+}
+
+/**
  * Process one "pmon list" line.
  *
  * @param ppmons pmons array
  * @param pmon_list_buffer one line from pmon list output
  * @param pmon_no line number
+ * @param total_pmons total number of the pmons in pmons array
  *
  */
-void solid_pmon_process_list_line(SolidPmon **pmons, char *pmon_list_buffer, int pmon_no)
+void solid_pmon_process_list_line(SolidPmon **pmons, char *pmon_list_buffer, int pmon_no, int total_pmons)
 {
 	/* pmon_list_buffer now has short description and
 	 * long description, separated by comma.
@@ -159,27 +190,27 @@ void solid_pmon_process_list_line(SolidPmon **pmons, char *pmon_list_buffer, int
 
 	/* We are trying to find the matching short description
 	 * in pmons.
-	 *
-	 * We are using linear search here for simplicity.
-	 * If needed it could be optimized to use hashing.
 	 */
-	int i;
-	for (i=0; pmons[i] !=NULL; i++) {
-		if (strcmp(pmon_list_buffer, pmons[i]->pmon_short) == 0) {
-			if (pmons[i]->pmon_no != -1) {
-				printf("duplicated pmon '%s'\n", pmon_list_buffer);
-				break;
-			}
-			/* Save the number and longer description. */
-			pmons[i]->pmon_no = pmon_no;
-			pmons[i]->pmon_long = strdup(longer_desc);
+	SolidPmon key = { .pmon_short = pmon_list_buffer };
+	SolidPmon *key_ptr = &key;
+	SolidPmon **pmon_ptr = bsearch(&key_ptr, pmons, total_pmons, sizeof(pmons[0]), cmp_pmon_name);
 
-			/* Convert short description to prometheus format. */
-			char *short_desc = pmons[i]->pmon_short;
-			for (;*short_desc; short_desc++) {
-				if (*short_desc == ' ') {
-					*short_desc = '_';
-				}
+	if (pmon_ptr == NULL) {
+		/* Matching pmon not found. */
+	} else if ((*pmon_ptr)->pmon_no != -1) {
+		printf("duplicated pmon '%s'\n", pmon_list_buffer);
+	} else {
+		SolidPmon *pmon = *pmon_ptr;
+		assert(strcmp(pmon->pmon_short, pmon_list_buffer) == 0);
+		/* Save the number and longer description. */
+		pmon->pmon_no = pmon_no;
+		pmon->pmon_long = strdup(longer_desc);
+
+		/* Convert short description to prometheus format. */
+		char *short_desc = pmon->pmon_short;
+		for (;*short_desc; short_desc++) {
+			if (*short_desc == ' ') {
+				*short_desc = '_';
 			}
 		}
 	}
@@ -199,14 +230,17 @@ int solid_pmons_read_desc(SolidPmon **pmons)
 	HDBC hdbc = SQL_NULL_HDBC;
 	HSTMT hstmt = SQL_NULL_HSTMT;
 	SQLRETURN r;
-	int i;
+	int total_pmons;
 	int retcode = -1;  // Function return code.
 
 	/* Initialize the unknown descriptions and pmon positions. */
-	for (i=0; pmons[i] != NULL; i++) {
-		pmons[i]->pmon_long = NULL;
-		pmons[i]->pmon_no = -1;
+	for (total_pmons=0; pmons[total_pmons] != NULL; total_pmons++) {
+		pmons[total_pmons]->pmon_long = NULL;
+		pmons[total_pmons]->pmon_no = -1;
 	}
+
+	/* Sort the pmons by pmon names. */
+	qsort(pmons, total_pmons, sizeof(pmons[0]), cmp_pmon_name);
 
 	/* Allocate the environment and connection handles. */
 	r = SQLAllocEnv(&henv);
@@ -254,7 +288,7 @@ int solid_pmons_read_desc(SolidPmon **pmons)
 			}
 
 			/* Process description line. */
-			solid_pmon_process_list_line(pmons, pmon_list_buffer, pmon_no);
+			solid_pmon_process_list_line(pmons, pmon_list_buffer, pmon_no, total_pmons);
 		}
 	}
 
@@ -277,13 +311,14 @@ int solid_pmons_read_desc(SolidPmon **pmons)
 		retcode = 0;
 
 		/* Check if all the pmons were found. */
-		for (i=0; pmons[i] !=NULL; i++) {
+		for (int i=0; pmons[i] !=NULL; i++) {
 			if (pmons[i]->pmon_no == -1) {
 				/* This pmon was not found. */
 				printf("pmon not found: %s\n", pmons[i]->pmon_short);
 				retcode = -1;
 			}
 		}
+		qsort(pmons, total_pmons, sizeof(pmons[0]), cmp_pmon_no);
 	}
 
 	/* Free the handles. */
@@ -332,6 +367,11 @@ char *solid_pmon_response_from_buffer(SolidPmon **pmons, char *pmon_r)
 	int pmon_no; // pmon number in the string.
 	char *ret = strdup(""); // Output string seed.
 	int out_len = 0; // Output len
+	int pos = 0;  // Current pmon number.
+
+	while (pmons[pos]->pmon_no == -1) {
+		pos++;
+	}
 
 	/* Go through the line of ' '-separated values. */
 	for (pmon_no=0; pmon_r != NULL; pmon_no++) {
@@ -340,32 +380,38 @@ char *solid_pmon_response_from_buffer(SolidPmon **pmons, char *pmon_r)
 			pmon_r++;
 		}
 
-		/* Run through the pmons. */
-		for (int i=0; pmons[i] != NULL; i++) {
-			/* Check if want this pmon value in the output */
-			if (pmons[i]->pmon_no == pmon_no) {
-				char *pmon_end = strchr(pmon_r, ' ');
+		/* pmons array is alredy sorted by pmon_no. */
+		if (pmons[pos]->pmon_no == pmon_no) {
+			char *pmon_end = strchr(pmon_r, ' ');
 
-				int pmon_len = pmon_end == NULL ? strlen(pmon_r): pmon_end-pmon_r;
+			int pmon_len = pmon_end == NULL ? strlen(pmon_r): pmon_end-pmon_r;
 
-				ret = realloc(ret, out_len+pmon_len+strlen(pmons[i]->pmon_long)+
-				                   3*strlen(pmons[i]->pmon_short)+200);
+			ret = realloc(ret, out_len+pmon_len+strlen(pmons[pos]->pmon_long)+
+			                   3*strlen(pmons[pos]->pmon_short)+200);
 
-				/* Write HELP, TYPE lines and counter name. */
-				sprintf(ret+out_len,
-				      "# HELP %s %s\n# TYPE %s %s\n%s ",
-				      pmons[i]->pmon_short, // HELP
-				      pmons[i]->pmon_long,
-				      pmons[i]->pmon_short, // TYPE
-				      pmon_type_str(pmons[i]->pmon_type),
-				      pmons[i]->pmon_short);
-				out_len += strlen(ret+out_len);
-				/* Append the pmon value. */
-				strncpy(ret+out_len, pmon_r, pmon_len);
-				out_len += pmon_len;
-				ret[out_len++] = '\n';
-				ret[out_len] = 0;
+			/* Write HELP, TYPE lines and counter name. */
+			sprintf(ret+out_len,
+			      "# HELP %s %s\n# TYPE %s %s\n%s ",
+			      pmons[pos]->pmon_short, // HELP
+			      pmons[pos]->pmon_long,
+			      pmons[pos]->pmon_short, // TYPE
+			      pmon_type_str(pmons[pos]->pmon_type),
+			      pmons[pos]->pmon_short);
+			out_len += strlen(ret+out_len);
+			/* Append the pmon value. */
+			strncpy(ret+out_len, pmon_r, pmon_len);
+			out_len += pmon_len;
+			ret[out_len++] = '\n';
+			ret[out_len] = 0;
+
+			/* Move to the next pmon in our list. */
+			pos++;
+			if (pmons[pos] == NULL) {
+				/* We have run over all the interesting pmons. */
+				break;
 			}
+			/* Assert the expected sorting order. */
+			assert(pmons[pos]->pmon_no > pmon_no);
 		}
 
 		/* Get to the next pmon in the list. */
