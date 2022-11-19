@@ -33,3 +33,6 @@ Links:
 - Microhttpd: https://github.com/zorxx/microhttpd
 - SolidDb: https://www.teamblue.unicomsi.com/products/soliddb/
 - SolidDb pmons: https://support.unicomsi.com/manuals/soliddb/101/index.html#page/Administrator_Guide%2F5_Monitoring.06.27.html%23ww1138785
+
+Quick test:
+```curl http://localhost:9101/metrics```
