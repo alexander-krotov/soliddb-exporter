@@ -41,21 +41,21 @@ typedef enum {
 	 */
 	PmonCounter,
 
- 	/* Pmon value corresponds to Prometeus Gauge
+ 	/* Pmon value corresponds to Prometheus Gauge
  	 * https://prometheus.io/docs/concepts/metric_types/#gauge
 	 */
 	PmonValue
 } SolidPmonType;
 
-/* @brief SolidDb Pmon descriptopr.
+/* @brief SolidDb Pmon descriptor.
  *
  * That is our descriptor for the SolidDb pmon.
  * When initializing the exporter we provide the pmon short names and
- * therir types, and then we read the longer description and the
- * positon from the server.
+ * their types, and then we read the longer description and the
+ * position from the server.
  */
 typedef struct {
-	/* Pmon name we want tp show to Prometheus. */
+	/* Pmon name we want to show to Prometheus. */
 	char *pmon_short;
 
 	/* Pmon type. We cannot derive it from the Solid pmon output,
@@ -71,11 +71,11 @@ typedef struct {
 } SolidPmon;
 
 /**
- * Create and initiaize pmons array. 
+ * Create and initialize pmons array.
  *
- * @param name0 first ppmon name
+ * @param name0 first pmon name
  *
- * @return NULL-terminnated array of pmon pointers.
+ * @return NULL-terminated array of pmon pointers.
  */
 SolidPmon **solid_pmons_init(char *name0, ...)
 {
@@ -144,7 +144,7 @@ void solid_pmon_process_list_line(SolidPmon **pmons, char *pmon_list_buffer, int
 	char *longer_desc = strchr(pmon_list_buffer, ',');
 	if (longer_desc != NULL) {
 		/* We found the separator: terminate the
-		 * short decription at comma and move
+		 * short description at comma and move
 		 * longer description start to the next char.
 		 */
 		*longer_desc = 0;
@@ -159,21 +159,21 @@ void solid_pmon_process_list_line(SolidPmon **pmons, char *pmon_list_buffer, int
 	/* We are trying to find the matching short description
 	 * in pmons.
 	 *
-	 * We are using linear seach here for simplicity.
-	 * If needed it could be optimized to use hasing.
+	 * We are using linear search here for simplicity.
+	 * If needed it could be optimized to use hashing.
 	 */
 	int i;
 	for (i=0; pmons[i] !=NULL; i++) {
 		if (strcmp(pmon_list_buffer, pmons[i]->pmon_short) == 0) {
 			if (pmons[i]->pmon_no != -1) {
-				printf("duplicted pmon '%s'\n", pmon_list_buffer);
+				printf("duplicated pmon '%s'\n", pmon_list_buffer);
 				break;
 			}
 			/* Save the number and longer description. */
 			pmons[i]->pmon_no = pmon_no;
 			pmons[i]->pmon_long = strdup(longer_desc);
 
-			/* Conver short description to prometeus format. */
+			/* Convert short description to prometheus format. */
 			char *short_desc = pmons[i]->pmon_short;
 			for (;*short_desc; short_desc++) {
 				if (*short_desc == ' ') {
@@ -194,14 +194,14 @@ void solid_pmon_process_list_line(SolidPmon **pmons, char *pmon_list_buffer, int
 int solid_pmons_read_desc(SolidPmon **pmons)
 {
 	/* ODBC environment, connection and statement. */
-	HENV henv = SQL_NULL_HENV; 
+	HENV henv = SQL_NULL_HENV;
 	HDBC hdbc = SQL_NULL_HDBC;
 	HSTMT hstmt = SQL_NULL_HSTMT;
 	SQLRETURN r;
 	int i;
 	int retcode = -1;  // Function return code.
 
-	/* Initilize the unknownlog descriptins and pmon positions. */
+	/* Initialize the unknown descriptions and pmon positions. */
 	for (i=0; pmons[i] != NULL; i++) {
 		pmons[i]->pmon_long = NULL;
 		pmons[i]->pmon_no = -1;
@@ -246,7 +246,7 @@ int solid_pmons_read_desc(SolidPmon **pmons)
 				break;
 			}
 
-			/* Check if full descriptin does fit into the buffer. */
+			/* Check if full description does fit into the buffer. */
 			if (indicator >= sizeof(pmon_list_buffer)) {
 				printf("pmon buffer overflow.\n");
 				break;
@@ -300,11 +300,17 @@ int solid_pmons_read_desc(SolidPmon **pmons)
 	return retcode;
 }
 
-
+/**
+ * Convert pmon type to string.
+ *
+ * @param pmon_type Pmon type
+ *
+ * @return statically allocated pmon type name.
+ */
 char *pmon_type_str(SolidPmonType pmon_type)
 {
 	switch (pmon_type) {
-		case PmonCounter: return "couner";
+		case PmonCounter: return "counter";
 		case PmonValue: return "gauge";
 		default: assert(0); return NULL;
 	}
@@ -318,11 +324,11 @@ char *pmon_type_str(SolidPmonType pmon_type)
  * @param ppmons pmons array
  * @param pmons_line "pmon -r" output line.
  *
- * @return malloc-allocted responce text.
+ * @return malloc-allocated response text.
  */
 char *solid_pmon_respoce_from_buffer(SolidPmon **pmons, char *pmon_r)
 {
-	int pmon_no; // pmon number in 
+	int pmon_no; // pmon number in the string.
 	char *ret = strdup(""); // Output string seed.
 	int out_len = 0; // Output len
 
@@ -373,16 +379,16 @@ char *solid_pmon_respoce_from_buffer(SolidPmon **pmons, char *pmon_r)
  *
  * @param ppmons pmons array
  *
- * @return malloc-allocted responce text.
+ * @return malloc-allocated response text.
  */
 char *solid_pmons_metrics(SolidPmon **pmons)
 {
 	/* ODBC environment, connection and statement. */
-	HENV henv = SQL_NULL_HENV; 
+	HENV henv = SQL_NULL_HENV;
 	HDBC hdbc = SQL_NULL_HDBC;
 	HSTMT hstmt = SQL_NULL_HSTMT;
 	SQLRETURN r;
-	char *ret = NULL;  /* Function reurn code. */
+	char *ret = NULL;  /* Function return code. */
 
 	/* Allocate the environment and connection handles. */
 	r = SQLAllocEnv(&henv);
@@ -415,7 +421,7 @@ char *solid_pmons_metrics(SolidPmon **pmons)
                                		&indicator);
 
 			if (r == SQL_SUCCESS) {
-				/* Check if full descriptin does fit into the buffer. */
+				/* Check if full description does fit into the buffer. */
 				if (indicator >= buffer_size) {
 					printf("pmon buffer overflow.\n");
 					/* Make sure buffer is 0-terminated. */
@@ -467,7 +473,7 @@ char *solid_pmons_metrics(SolidPmon **pmons)
  * @param url URL string
  * @param method HTTP method string
  *
- * @return MHD_queue_response retunr code.
+ * @return MHD_queue_response return code.
  */
 enum MHD_Result solidhttp_handler(
 	void *p, struct MHD_Connection *connection, const char *url, const char *method,
@@ -493,7 +499,7 @@ enum MHD_Result solidhttp_handler(
 		buf = "Bad Request\n";
 	}
 
-	/* Create a responce. */
+	/* Create a response. */
 	assert(buf != NULL);
 	struct MHD_Response *response = MHD_create_response_from_buffer(strlen(buf), (void *)buf, must_copy);
 	enum MHD_Result ret;
@@ -559,7 +565,7 @@ int main(int argc, char **argv)
 	}
 
 	if (ret == 0) {
-		/* Start http deaemon. */
+		/* Start http daemon. */
 		daemon = MHD_start_daemon(flags, port, NULL, NULL, &solidhttp_handler, pmons, MHD_OPTION_END);
 		if (daemon == NULL) {
 			printf("Cannot start MHD daemon\n");

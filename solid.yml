@@ -1,0 +1,9 @@
+# Sample config for Prometheus.
+
+# Add following job to scrape_config: section
+#scrape_configs:
+  - job_name: solid
+    # If soliddb-exporter is installed, grab stats about the local
+    # machine by default.
+    static_configs:
+      - targets: ['localhost:9101']
