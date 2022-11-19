@@ -19,6 +19,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <assert.h>
+#include <pthread.h>
 
 #include "microhttpd.h"
 #include "solidodbc3.h"
@@ -326,7 +327,7 @@ char *pmon_type_str(SolidPmonType pmon_type)
  *
  * @return malloc-allocated response text.
  */
-char *solid_pmon_respoce_from_buffer(SolidPmon **pmons, char *pmon_r)
+char *solid_pmon_response_from_buffer(SolidPmon **pmons, char *pmon_r)
 {
 	int pmon_no; // pmon number in the string.
 	char *ret = strdup(""); // Output string seed.
@@ -427,7 +428,7 @@ char *solid_pmons_metrics(SolidPmon **pmons)
 					/* Make sure buffer is 0-terminated. */
 					pmon_list_buffer[buffer_size-1] = 0;
 				}
-				ret = solid_pmon_respoce_from_buffer(pmons, pmon_list_buffer);
+				ret = solid_pmon_response_from_buffer(pmons, pmon_list_buffer);
 			}
 			free(pmon_list_buffer);
 		} else if (r == SQL_NO_DATA) {
@@ -535,11 +536,13 @@ void process_argv(int argc, char **argv)
 	}
 }
 
-static int done = 0;
+static pthread_cond_t done = PTHREAD_COND_INITIALIZER;
 
 void intHandler(int signal) {
+	int rc;
 	printf("shutting down.\n");
-	done = 1;
+	rc = pthread_cond_signal(&done);
+        assert(rc == 0);
 }
 
 int main(int argc, char **argv)
@@ -574,10 +577,22 @@ int main(int argc, char **argv)
 	}
 
 	if (ret == 0) {
+		ret = pthread_cond_init(&done, NULL);
+	}
+
+	if (ret == 0) {
 		/* Our main waiting loop. It is only interrupted by sending INT or STOP signal. */
 		signal(SIGINT, intHandler);
 		signal(SIGSTOP, intHandler);
-		while(done == 0) {}
+
+		/* Wait for done message to be sent. */
+		int rc;
+		pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+		do {
+			rc = pthread_cond_wait(&done, &mutex);
+		} while (rc != 0);
+		pthread_cond_destroy(&done);
+		pthread_mutex_destroy(&mutex);
 	}
 
 	/* Free the httpd daemon. */
