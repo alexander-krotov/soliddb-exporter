@@ -20,8 +20,7 @@ solid-exporter [port] [connect-string] [user] [password]
 To access pmons through this exporter add following to the prometheus config file:
 ```
   - job_name: solid
-    # If soliddb-exporter is installed, grab stats about the local
-    # machine by default.
+    # If soliddb-exporter is installed, grab stats about soliddb.
     static_configs:
       - targets: ['localhost:9101']
 ```
