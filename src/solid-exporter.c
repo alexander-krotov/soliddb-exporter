@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+#define _XOPEN_SOURCE 700 /* For -std=c99 compatibility. */
+
 #include <string.h>
 #include <signal.h>
 #include <stdlib.h>
@@ -34,6 +36,13 @@ static unsigned short port = LISTEN_PORT;
 static char *solid_connect_string = SOLIDDB_CONNECT_STRING;
 static char *solid_connect_user = SOLIDDB_USER_NAME;
 static char *solid_connect_password = SOLIDDB_PASSWORD;
+
+/* Older versions of libmicrohttpd do not define enum MHD_Result. */
+#if MHD_VERSION <= 0x00093300
+typedef int MHD_Result;
+#else
+typedef enum MHD_Result MHD_Result;
+#endif
 
 /* Type of the Pmon counter */
 typedef enum {
@@ -136,8 +145,8 @@ void solid_pmons_free(SolidPmon **pmons)
  */
 static int cmp_pmon_name(const void *m1, const void *m2)
 {
-	const SolidPmon **mi1 = m1;
-	const SolidPmon **mi2 = m2;
+	const SolidPmon *const *mi1 = m1;
+	const SolidPmon *const *mi2 = m2;
 	return strcmp((*mi1)->pmon_short, (*mi2)->pmon_short);
 }
 
@@ -148,8 +157,8 @@ static int cmp_pmon_name(const void *m1, const void *m2)
  */
 static int cmp_pmon_no(const void *m1, const void *m2)
 {
-	const SolidPmon **mi1 = m1;
-	const SolidPmon **mi2 = m2;
+	const SolidPmon *const *mi1 = m1;
+	const SolidPmon *const *mi2 = m2;
 	if ((*mi1)->pmon_no < (*mi2)->pmon_no) {
 		return -1;
 	} else if ((*mi1)->pmon_no > (*mi2)->pmon_no) {
@@ -522,7 +531,7 @@ char *solid_pmons_metrics(SolidPmon **pmons)
  *
  * @return MHD_queue_response return code.
  */
-enum MHD_Result solidhttp_handler(
+MHD_Result solidhttp_handler(
 	void *p, struct MHD_Connection *connection, const char *url, const char *method,
 	const char *version, const char *upload_data, size_t *upload_data_size, void **con_cls)
 {
@@ -549,7 +558,7 @@ enum MHD_Result solidhttp_handler(
 	/* Create a response. */
 	assert(buf != NULL);
 	struct MHD_Response *response = MHD_create_response_from_buffer(strlen(buf), (void *)buf, must_copy);
-	enum MHD_Result ret;
+	MHD_Result ret;
 	if (response) {
 		ret = MHD_queue_response(connection, status_code, response);
 		MHD_destroy_response(response);
