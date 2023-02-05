@@ -587,12 +587,20 @@ void process_argv(int argc, char **argv)
 	}
 
 	if (argc >= 5) {
-		solid_connect_password = argv[3];
+		solid_connect_password = argv[4];
 	}
 }
 
 static pthread_cond_t done = PTHREAD_COND_INITIALIZER;
 
+/**
+ * Signal handler for the signals interrupting oor daemon.
+ *
+ * It does nothing but sends the main function message (done)
+ * and that makes the main function exit.
+ *
+ * @param signal - not used
+ */
 void intHandler(int signal) {
 	int rc;
 	printf("shutting down.\n");
