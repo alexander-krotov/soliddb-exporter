@@ -465,9 +465,13 @@ std::string SolidExporter::pmons_metrics()
 	} catch (...) {
 		assert(0);
 	}
-	return "# FATAL errror.";
+	return "# FATAL error.";
 }
 
+/** Read the pmon values from the server by using admin command 'pmon -r'.
+ *
+ * @return response text.
+ */
 std::string SolidExporter::get_pmon_metrics()
 {
 	SQLRETURN r = SQLExecDirect(hstmt, (SQLCHAR*)"admin command 'pmon -r'", SQL_NTS);
@@ -552,6 +556,14 @@ enum MHD_Result solidhttp_handler(
 
 std::condition_variable done;
 
+/**
+ * Signal handler for the signals interrupting our daemon.
+ *
+ * It does nothing but sends the main function message (done)
+ * and that makes the main function exit.
+ *
+ * @param signal - not used
+ */
 void intHandler(int signal) {
 	printf("shutting down.\n");
 	done.notify_one();
@@ -576,7 +588,7 @@ int main(int argc, char **argv)
 		connect_user = argv[3];
 	}
 	if (argc >= 5) {
-		connect_password = argv[3];
+		connect_password = argv[4];
 	}
 
 	/* Create the pmons container. */
