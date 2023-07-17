@@ -125,7 +125,7 @@ SolidPmon **solid_pmons_init(char *name0, ...)
 /**
  * Deallocate the pmons array.
  *
- * @param ppmons pmons array
+ * @param pmons pmons array
  */
 void solid_pmons_free(SolidPmon **pmons)
 {
@@ -139,7 +139,7 @@ void solid_pmons_free(SolidPmon **pmons)
 }
 
 /**
- * Compare 2 pmons by the their names.
+ * Compare 2 pmons by the names.
  *
  * The predicate to be used with qsort and bsearch.
  */
@@ -151,7 +151,7 @@ static int cmp_pmon_name(const void *m1, const void *m2)
 }
 
 /**
- * Compare 2 pmons by the their names.
+ * Compare 2 pmons by the numbers.
  *
  * The predicate to be used with qsort and bsearch.
  */
@@ -171,7 +171,7 @@ static int cmp_pmon_no(const void *m1, const void *m2)
 /**
  * Process one "pmon list" line.
  *
- * @param ppmons pmons array
+ * @param pmons pmons array
  * @param pmon_list_buffer one line from pmon list output
  * @param pmon_no line number
  * @param total_pmons total number of the pmons in pmons array
@@ -228,7 +228,7 @@ void solid_pmon_process_list_line(SolidPmon **pmons, char *pmon_list_buffer, int
 /**
  * Read the pmon descriptions from the server.
  *
- * @param ppmons pmons array
+ * @param pmons pmons array
  *
  * @return 0 if success.
  */
@@ -366,7 +366,7 @@ char *pmon_type_str(SolidPmonType pmon_type)
  *
  * line is ' ' separated list of pmon values.
  *
- * @param ppmons pmons array
+ * @param pmons pmons array
  * @param pmons_line "pmon -r" output line.
  *
  * @return malloc-allocated response text.
@@ -389,7 +389,7 @@ char *solid_pmon_response_from_buffer(SolidPmon **pmons, char *pmon_r)
 			pmon_r++;
 		}
 
-		/* pmons array is alredy sorted by pmon_no. */
+		/* pmons array is already sorted by pmon_no. */
 		if (pmons[pos]->pmon_no == pmon_no) {
 			char *pmon_end = strchr(pmon_r, ' ');
 
@@ -433,7 +433,7 @@ char *solid_pmon_response_from_buffer(SolidPmon **pmons, char *pmon_r)
 /**
  * Create metrics output for pmons.
  *
- * @param ppmons pmons array
+ * @param pmons pmons array
  *
  * @return malloc-allocated response text.
  */
@@ -594,9 +594,9 @@ void process_argv(int argc, char **argv)
 static pthread_cond_t done = PTHREAD_COND_INITIALIZER;
 
 /**
- * Signal handler for the signals interrupting oor daemon.
+ * Signal handler for the signals interrupting the daemon.
  *
- * It does nothing but sends the main function message (done)
+ * It does nothing but sends the main function a message (done)
  * and that makes the main function exit.
  *
  * @param signal - not used
@@ -605,7 +605,7 @@ void intHandler(int signal) {
 	int rc;
 	printf("shutting down.\n");
 	rc = pthread_cond_signal(&done);
-        assert(rc == 0);
+	assert(rc == 0);
 }
 
 int main(int argc, char **argv)

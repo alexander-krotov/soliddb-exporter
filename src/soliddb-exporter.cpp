@@ -433,7 +433,7 @@ std::string SolidExporter::response_from_buffer(const std::string &pmon_r)
 		if (pmon_end == std::string::npos) {
 			break;
 		}
-		start = pmon_end+1;  // Move start 1 char past ' ' delimeter.
+		start = pmon_end+1;  // Move start 1 char past ' ' delimiter.
 	}
 
 	return output_buffer.str();
